@@ -1,6 +1,6 @@
-package model
+package json.model
 
-import visitor.JsonVisitor
+import json.visitor.JsonVisitor
 
 data class JsonObject(val properties: Map<String, JsonElement>) : JsonElement() {
 

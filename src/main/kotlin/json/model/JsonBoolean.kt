@@ -1,6 +1,6 @@
-package model
+package json.model
 
-import visitor.JsonVisitor
+import json.visitor.JsonVisitor
 
 data class JsonBoolean(val value: Boolean) : JsonElement() {
     override fun toJsonString() = value.toString()

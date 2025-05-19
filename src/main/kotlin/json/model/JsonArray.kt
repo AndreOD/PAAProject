@@ -1,6 +1,6 @@
-package model
+package json.model
 
-import visitor.JsonVisitor
+import json.visitor.JsonVisitor
 
 data class JsonArray(val elements: List<JsonElement>) : JsonElement() {
     override fun toJsonString(): String {

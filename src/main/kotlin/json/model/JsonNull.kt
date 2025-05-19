@@ -1,6 +1,6 @@
-package model
+package json.model
 
-import visitor.JsonVisitor
+import json.visitor.JsonVisitor
 
 object JsonNull : JsonElement() {
     override fun toJsonString() = "null"

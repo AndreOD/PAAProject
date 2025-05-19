@@ -1,6 +1,6 @@
-package visitor
+package json.visitor
 
-import model.*;
+import json.model.*
 
 class ValidArrayVisitor : JsonVisitor {
     private var isValid = true

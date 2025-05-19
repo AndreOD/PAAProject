@@ -1,6 +1,6 @@
-package model
+package json.model
 
-import visitor.JsonVisitor
+import json.visitor.JsonVisitor
 
 data class JsonString(val value: String) : JsonElement() {
     override fun toJsonString() = "\"$value\""

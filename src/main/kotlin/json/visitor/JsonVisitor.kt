@@ -1,6 +1,6 @@
-package visitor
+package json.visitor
 
-import model.*
+import json.model.*
 
 interface JsonVisitor {
     fun visit(obj: JsonObject)
