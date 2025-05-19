@@ -1,5 +1,4 @@
 import model.*;
-import kotlin.reflect.*
 
 import kotlin.reflect.full.memberProperties
 import kotlin.reflect.jvm.isAccessible
@@ -97,11 +96,9 @@ fun main(args: Array<String>) {
         )
     )
 
-    val courseStrig = toJsonModel(course).toString();
+    val courseString = toJsonModel(course).toString();
 
-    println(courseStrig);
-
-
+    println(courseString);
 
 }
 
