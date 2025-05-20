@@ -20,7 +20,7 @@ annotation class QueryParam
 @Target(AnnotationTarget.VALUE_PARAMETER)
 annotation class PathParam
 
-class RestEngine(private val controllerClass : KClass<*>) {
+class RestEngine(private vararg val controllerClasses :  KClass<*>) {
 
     fun start(port: Int = 8080) {
         try {
@@ -29,54 +29,56 @@ class RestEngine(private val controllerClass : KClass<*>) {
             error("Error occurred while starting Rest Engine: ${e.message.toString()}")
         }
         val server = HttpServer.create(InetSocketAddress(port), 0);
+        controllerClasses.forEach {
+            val rootPath = (it.findAnnotation<Mapping>()?.path) ?: "";
 
-        val rootPath = (controllerClass.findAnnotation<Mapping>()?.path) ?: "";
+            it.declaredFunctions.forEach {
+                    memberFunction ->
+                val mappingAnnotation = memberFunction.findAnnotation<Mapping>() ?: return;
+                var endpointPath = "/${rootPath.trim()}/${mappingAnnotation.path.trim()}";
+                endpointPath = endpointPath.split("/").filter { !it.contains("{") }.joinToString("/")
+                server.createContext(endpointPath) { exchange ->
 
-        controllerClass.declaredFunctions.forEach {
-            memberFunction ->
-            val mappingAnnotation = memberFunction.findAnnotation<Mapping>() ?: return;
-            var endpointPath = "/${rootPath.trim()}/${mappingAnnotation.path.trim()}";
-            endpointPath = endpointPath.split("/").filter { !it.contains("{") }.joinToString("/")
-            server.createContext(endpointPath) { exchange ->
+                    val pathTemplateParts = endpointPath.substringBefore("?").split("/");
+                    val requestPathParts = exchange.requestURI.path.substringBefore("?").split("/")
 
-                val pathTemplateParts = endpointPath.substringBefore("?").split("/");
-                val requestPathParts = exchange.requestURI.path.substringBefore("?").split("/")
-
-                val requestQueryParts : Map<String, String> = (exchange.requestURI.query ?: "").substringAfter("?").split("&")
-                    .associate {
-                    it.substringBefore("=") to it.substringAfter("=")
-                }
-
-                val params : List<*> = memberFunction.parameters.map {
-                    param ->
-                    val pathAnnotation = param.findAnnotation<PathParam>();
-                    val queryAnnotation = param.findAnnotation<QueryParam>();
-                    val kclass: KClass<*> = param.type.classifier as KClass<*>;
-
-                    when {
-                        param.kind == Kind.INSTANCE -> controllerClass.primaryConstructor?.call()
-                        pathAnnotation != null -> {;
-                            //val pos = pathTemplateParts.indexOf("{${param.name}}");
-                            val pos = pathTemplateParts.size
-                            convertStringToPrimitiveType(requestPathParts[pos], kclass)
+                    val requestQueryParts : Map<String, String> = (exchange.requestURI.query ?: "").substringAfter("?").split("&")
+                        .associate {
+                            it.substringBefore("=") to it.substringAfter("=")
                         }
-                        queryAnnotation != null -> {
-                            convertStringToPrimitiveType(requestQueryParts[param.name] ?: "", kclass)
-                        }
-                        else -> {
-                             throw IllegalArgumentException("Unsupported path parameter: ${param.name}")
+
+                    val params : List<*> = memberFunction.parameters.map {
+                        param ->
+                        val pathAnnotation = param.findAnnotation<PathParam>();
+                        val queryAnnotation = param.findAnnotation<QueryParam>();
+                        val kclass: KClass<*> = param.type.classifier as KClass<*>;
+
+                        when {
+                            param.kind == Kind.INSTANCE -> it.primaryConstructor?.call()
+                            pathAnnotation != null -> {;
+                                //val pos = pathTemplateParts.indexOf("{${param.name}}");
+                                val pos = pathTemplateParts.size
+                                convertStringToPrimitiveType(requestPathParts[pos], kclass)
+                            }
+                            queryAnnotation != null -> {
+                                convertStringToPrimitiveType(requestQueryParts[param.name] ?: "", kclass)
+                            }
+                            else -> {
+                                throw IllegalArgumentException("Unsupported path parameter: ${param.name}")
+                            }
                         }
                     }
+
+                    val returnedValue = memberFunction.call(*params.toTypedArray());
+
+                    val response = JsonSerializer.toJsonModel(returnedValue).toJsonString();
+                    exchange.sendResponseHeaders(200, response.toByteArray().size.toLong())
+                    exchange.responseBody.write(response.toByteArray())
+
                 }
-
-                val returnedValue = memberFunction.call(*params.toTypedArray());
-
-                val response = JsonSerializer.toJsonModel(returnedValue).toJsonString();
-                exchange.sendResponseHeaders(200, response.toByteArray().size.toLong())
-                exchange.responseBody.write(response.toByteArray())
-
             }
         }
+
         server.start()
 
     }
