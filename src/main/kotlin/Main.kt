@@ -81,6 +81,12 @@ class Controller {
         @QueryParam n: Int,
         @QueryParam text: String
     ): Map<String, String> = mapOf(text to text.repeat(n))
+
+    @Mapping("double/{string}")
+    fun argandpath(
+        @QueryParam n: Int,
+        @PathParam string: String
+    ): String = string.repeat(n)
 }
 
 

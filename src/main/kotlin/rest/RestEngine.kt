@@ -35,18 +35,17 @@ class RestEngine(private val controllerClass : KClass<*>) {
         controllerClass.declaredFunctions.forEach {
             memberFunction ->
             val mappingAnnotation = memberFunction.findAnnotation<Mapping>() ?: return;
-            val endpointPath = "/${rootPath.trim()}/${mappingAnnotation.path.trim()}";
-            println(endpointPath)
+            var endpointPath = "/${rootPath.trim()}/${mappingAnnotation.path.trim()}";
+            endpointPath = endpointPath.split("/").filter { !it.contains("{") }.joinToString("/")
             server.createContext(endpointPath) { exchange ->
 
-                val pathTemplateParts = endpointPath.split("/");
-                val requestPathParts = exchange.requestURI.path.split("/")
-                // users/1/info
-                val requestQueryParts : Map<String, String> = exchange.requestURI.query.substringAfter("?").split("&")
+                val pathTemplateParts = endpointPath.substringBefore("?").split("/");
+                val requestPathParts = exchange.requestURI.path.substringBefore("?").split("/")
+
+                val requestQueryParts : Map<String, String> = (exchange.requestURI.query ?: "").substringAfter("?").split("&")
                     .associate {
                     it.substringBefore("=") to it.substringAfter("=")
                 }
-
 
                 val params : List<*> = memberFunction.parameters.map {
                     param ->
@@ -57,7 +56,8 @@ class RestEngine(private val controllerClass : KClass<*>) {
                     when {
                         param.kind == Kind.INSTANCE -> controllerClass.primaryConstructor?.call()
                         pathAnnotation != null -> {;
-                            val pos = pathTemplateParts.indexOf("{${param.name}}");
+                            //val pos = pathTemplateParts.indexOf("{${param.name}}");
+                            val pos = pathTemplateParts.size
                             convertStringToPrimitiveType(requestPathParts[pos], kclass)
                         }
                         queryAnnotation != null -> {
