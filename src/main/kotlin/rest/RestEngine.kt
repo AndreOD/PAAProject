@@ -20,35 +20,35 @@ annotation class QueryParam
 @Target(AnnotationTarget.VALUE_PARAMETER)
 annotation class PathParam
 
-class RestEngine(private vararg val controllerClasses :  KClass<*>) {
+class RestEngine(private vararg val controllerClasses: KClass<*>) {
 
     fun start(port: Int = 8080) {
         try {
 
-        }catch (e: Exception) {
+        } catch (e: Exception) {
             error("Error occurred while starting Rest Engine: ${e.message.toString()}")
         }
         val server = HttpServer.create(InetSocketAddress(port), 0);
         controllerClasses.forEach {
             val rootPath = (it.findAnnotation<Mapping>()?.path) ?: "";
 
-            it.declaredFunctions.forEach {
-                    memberFunction ->
+            it.declaredFunctions.forEach { memberFunction ->
                 val mappingAnnotation = memberFunction.findAnnotation<Mapping>() ?: return;
-                var endpointPath = "/${rootPath.trim()}/${mappingAnnotation.path.trim()}";
-                endpointPath = endpointPath.split("/").filter { !it.contains("{") }.joinToString("/")
+                val endpointPath =
+                    "/${rootPath.trim()}/${mappingAnnotation.path.trim()}".split("/").filter { !it.contains("{") }
+                        .joinToString("/");
                 server.createContext(endpointPath) { exchange ->
 
                     val pathTemplateParts = endpointPath.substringBefore("?").split("/");
                     val requestPathParts = exchange.requestURI.path.substringBefore("?").split("/")
 
-                    val requestQueryParts : Map<String, String> = (exchange.requestURI.query ?: "").substringAfter("?").split("&")
-                        .associate {
-                            it.substringBefore("=") to it.substringAfter("=")
-                        }
+                    val requestQueryParts: Map<String, String> =
+                        (exchange.requestURI.query ?: "").substringAfter("?").split("&")
+                            .associate {
+                                it.substringBefore("=") to it.substringAfter("=")
+                            }
 
-                    val params : List<*> = memberFunction.parameters.map {
-                        param ->
+                    val params: List<*> = memberFunction.parameters.map { param ->
                         val pathAnnotation = param.findAnnotation<PathParam>();
                         val queryAnnotation = param.findAnnotation<QueryParam>();
                         val kclass: KClass<*> = param.type.classifier as KClass<*>;
@@ -60,9 +60,11 @@ class RestEngine(private vararg val controllerClasses :  KClass<*>) {
                                 val pos = pathTemplateParts.size
                                 convertStringToPrimitiveType(requestPathParts[pos], kclass)
                             }
+
                             queryAnnotation != null -> {
                                 convertStringToPrimitiveType(requestQueryParts[param.name] ?: "", kclass)
                             }
+
                             else -> {
                                 throw IllegalArgumentException("Unsupported path parameter: ${param.name}")
                             }

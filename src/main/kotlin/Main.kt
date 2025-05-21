@@ -12,7 +12,6 @@ data class Course(
     val evaluation: List<EvalItem>
 )
 
-
 data class EvalItem(
     val name: String,
     val percentage: Double,
